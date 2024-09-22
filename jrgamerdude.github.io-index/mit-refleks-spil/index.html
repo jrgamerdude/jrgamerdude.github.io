@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forbedret Refleks-Træner</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(45deg, #3498db, #8e44ad);
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+        }
+        #gameCanvas {
+            border: 3px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            display: none;
+        }
+        .menu {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        button {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: #2ecc71;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #27ae60;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="score">Score: <span id="scoreValue">0</span></div>
+    <div id="startMenu" class="menu">
+        <h1>Forbedret Refleks-Træner</h1>
+        <p>Vælg sværhedsgrad:</p>
+        <button id="easyButton">Let</button>
+        <button id="mediumButton">Medium</button>
+        <button id="hardButton">Svær</button>
+    </div>
+    <div id="gameOverMenu" class="menu" style="display: none;">
+        <h2>Spil Slut</h2>
+        <p>Din score: <span id="finalScore"></span></p>
+        <button id="restartButton">Spil Igen</button>
+        <button id="menuButton">Hovedmenu</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startMenu = document.getElementById('startMenu');
+        const gameOverMenu = document.getElementById('gameOverMenu');
+        const scoreElement = document.getElementById('scoreValue');
+        const finalScoreElement = document.getElementById('finalScore');
+        const scoreDisplay = document.getElementById('score');
+
+        let paddleX, paddleY, paddleWidth, paddleHeight;
+        let balls = [];
+        let score = 0;
+        let gameRunning = false;
+        let difficulty = 'medium';
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth * 0.8;
+            canvas.height = window.innerHeight * 0.8;
+            paddleWidth = canvas.width * 0.15;
+            paddleHeight = 10;
+            paddleY = canvas.height - paddleHeight - 10;
+        }
+
+        function startGame(selectedDifficulty) {
+            difficulty = selectedDifficulty;
+            gameRunning = true;
+            score = 0;
+            scoreElement.textContent = score;
+            balls = [];
+            startMenu.style.display = 'none';
+            gameOverMenu.style.display = 'none';
+            canvas.style.display = 'block';
+            scoreDisplay.style.display = 'block';
+            spawnBall();
+            updateGame();
+        }
+
+        function spawnBall() {
+            let speed;
+            switch(difficulty) {
+                case 'easy':
+                    speed = 1 + Math.random();
+                    break;
+                case 'medium':
+                    speed = 2 + Math.random() * 2;
+                    break;
+                case 'hard':
+                    speed = 3 + Math.random() * 3;
+                    break;
+            }
+            balls.push({
+                x: Math.random() * canvas.width,
+                y: 0,
+                radius: 10,
+                speed: speed,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`
+            });
+        }
+
+        function updateGame() {
+            if (!gameRunning) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawPaddle();
+            updateBalls();
+            
+            let spawnChance;
+            switch(difficulty) {
+                case 'easy':
+                    spawnChance = 0.01;
+                    break;
+                case 'medium':
+                    spawnChance = 0.02;
+                    break;
+                case 'hard':
+                    spawnChance = 0.03;
+                    break;
+            }
+            if (Math.random() < spawnChance) spawnBall();
+            
+            requestAnimationFrame(updateGame);
+        }
+
+        function drawPaddle() {
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(paddleX - paddleWidth / 2, paddleY, paddleWidth, paddleHeight);
+        }
+
+        function updateBalls() {
+            for (let i = balls.length - 1; i >= 0; i--) {
+                let ball = balls[i];
+                ball.y += ball.speed;
+                
+                ctx.fillStyle = ball.color;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (ball.y + ball.radius > paddleY && 
+                    ball.x > paddleX - paddleWidth / 2 && 
+                    ball.x < paddleX + paddleWidth / 2) {
+                    score++;
+                    scoreElement.textContent = score;
+                    balls.splice(i, 1);
+                } else if (ball.y - ball.radius > canvas.height) {
+                    gameOver();
+                    return;
+                }
+            }
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            finalScoreElement.textContent = score;
+            gameOverMenu.style.display = 'block';
+            canvas.style.display = 'none';
+            scoreDisplay.style.display = 'none';
+        }
+
+        function showMainMenu() {
+            startMenu.style.display = 'block';
+            gameOverMenu.style.display = 'none';
+            canvas.style.display = 'none';
+            scoreDisplay.style.display = 'none';
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            paddleX = e.clientX - rect.left;
+        });
+
+        document.getElementById('easyButton').addEventListener('click', () => startGame('easy'));
+        document.getElementById('mediumButton').addEventListener('click', () => startGame('medium'));
+        document.getElementById('hardButton').addEventListener('click', () => startGame('hard'));
+        document.getElementById('restartButton').addEventListener('click', () => startGame(difficulty));
+        document.getElementById('menuButton').addEventListener('click', showMainMenu);
+
+        window.addEventListener('resize', resizeCanvas);
+
+        resizeCanvas();
+    </script>
+</body>
+</html>
